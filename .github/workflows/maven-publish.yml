@@ -1,41 +1,21 @@
-# This workflow will build a package using Maven and then publish it to GitHub packages when a release is created
-# For more information see: https://github.com/actions/setup-java/blob/main/docs/advanced-usage.md#apache-maven-with-a-settings-path
-
-name: Add JAR to GitHub Release
-
+name: Release JAR
 on:
   release:
-    types: [created]  # Trigger workflow when a new GitHub release is created
-
+    types: [published]
+permissions:
+  contents: write
 jobs:
-  upload-jar:
+  release:
     runs-on: ubuntu-latest
     steps:
-
       - uses: actions/checkout@v4
-      
-      - name: Step 01. Set up JDK 20
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
-          java-version: '20'
-          distribution: 'temurin'
-          cache: maven  
-        
-      - name: Step 02. Build with Maven 
-        run: mvn clean package
-      
-      - name: Step 03. Deploy
-        run: mkdir staging && cp target/*.jar staging  
-
-      - name: Step 04. Set Executable Permissions
-        run: chmod +x target/testing-2024-1.0-SNAPSHOT.jar 
-              
-      - name: Step 05. Upload JAR to GitHub Release
-        uses: actions/upload-release-asset@v1
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: mvn --batch-mode clean verify
+      - name: Upload release asset
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}  # The upload URL from the created release
-          asset_path: "target/testing-2024-1.0-SNAPSHOT.jar"  # Path to the JAR file
-          asset_name: "testing-2024-1.0-SNAPSHOT.jar"  # Name of the JAR file on the release
-          asset_content_type: "application/java-archive"  # MIME type for JAR files
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" target/edu-java-ci-cd-*.jar --clobber
